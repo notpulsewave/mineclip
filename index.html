@@ -1,406 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Mineclip lite</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
-  body { font-family: 'Inter', system_ui, sans-serif; }
-  .title-font { font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: -0.03em; }
-  .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
-
-  .crop-box {
-    position: absolute;
-    border: 2px solid #ef4444;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
-    pointer-events: none;
-    z-index: 10;
-  }
-  .crop-handle {
-    position: absolute;
-    width: 14px; height: 14px;
-    background: #ef4444;
-    border: 2px solid white;
-    border-radius: 9999px;
-    pointer-events: all;
-    z-index: 20;
-  }
-
-  .timeline {
-    position: relative;
-    height: 8px;
-    background: #27272a;
-    border-radius: 9999px;
-    cursor: pointer;
-  }
-  .timeline-trim {
-    position: absolute;
-    height: 100%;
-    background: #ef4444;
-    border-radius: 9999px;
-    opacity: 0.3;
-  }
-  .timeline-playhead {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 24px;
-    background: white;
-    border-radius: 9999px;
-    z-index: 40;
-    pointer-events: none;
-  }
-  .timeline-handle {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    background: #ef4444;
-    border: 3px solid white;
-    border-radius: 9999px;
-    cursor: ew-resize;
-    z-index: 30;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  }
-</style>
+    <style>
+        :root { --main-red: #ff0000; --bg-black: #121212; --text-gray: #ccc; }
+        body { background: var(--bg-black); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { color: var(--main-red); margin-bottom: 5px; letter-spacing: 2px; }
+        .editor-container { border: 1px solid #333; padding: 20px; border-radius: 10px; width: 600px; background: #1a1a1a; }
+        .status-box { background: #000; padding: 10px; border-left: 4px solid var(--main-red); margin: 15px 0; font-size: 0.9em; }
+        button { background: var(--main-red); color: white; border: none; padding: 12px 20px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-right: 5px; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #preview { width: 100%; margin-top: 10px; border: 1px solid var(--main-red); display: none; }
+    </style>
 </head>
-<body class="bg-zinc-950 text-white">
-  <div class="max-w-4xl mx-auto px-6 py-12">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-10">
-      <div class="flex items-center gap-x-3">
-        <div class="w-10 h-10 bg-red-600 rounded-2xl flex items-center justify-center">
-          <span class="text-3xl">🎥</span>
-        </div>
-        <div>
-          <h1 class="title-font text-5xl font-semibold tracking-tighter">mineclip</h1>
-          <p class="text-zinc-500 text-sm -mt-1">Capture • Record • Clip</p>
-        </div>
-      </div>
-      <div class="px-4 py-1.5 rounded-3xl bg-zinc-900 text-xs font-medium flex items-center gap-x-2">
-        <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-        <span id="status-text">Ready</span>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="glass rounded-3xl p-8">
-      <div class="mb-8">
-        <div class="flex items-center justify-between mb-3 px-1">
-          <div class="text-sm font-medium text-zinc-400">Preview</div>
-        </div>
+<body>
+    <h1>MINECLIP</h1>
+    
+    <div class="editor-container">
+        <div id="status" class="status-box">Status: Please calibrate your resolution to begin.</div>
         
-        <div class="relative bg-black rounded-3xl overflow-hidden aspect-video border border-white/10">
-          <video id="preview" class="w-full h-full object-contain hidden" autoplay muted playsinline></video>
-          <video id="player" class="w-full h-full object-contain hidden" controls></video>
-          <div id="overlay" class="absolute inset-0 flex items-center justify-center bg-black/60 hidden">
-            <div class="text-center"><div class="text-red-500 text-4xl mb-2">●</div><div class="text-sm font-medium">Recording</div></div>
-          </div>
-        </div>
-      </div>
+        <button id="checkBtn">Calibrate</button>
+        <button id="startBtn" disabled>Start Recording</button>
+        <button id="stopBtn" disabled>Stop Recording</button>
 
-      <div class="flex items-center justify-center gap-x-4 flex-wrap gap-y-3">
-        <button id="start" class="record-btn px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-semibold text-lg rounded-3xl flex items-center gap-x-3 shadow-xl">
-          <span>●</span><span>Start Recording</span>
-        </button>
-        <button id="stop" class="px-8 py-4 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 font-semibold text-lg rounded-3xl" disabled>Stop</button>
-        <button id="open-editor" class="px-8 py-4 bg-zinc-800 hover:bg-zinc-700 font-semibold text-lg rounded-3xl hidden">Open Editor</button>
-        <button id="download" class="px-8 py-4 bg-white text-black font-semibold text-lg rounded-3xl disabled:opacity-50" disabled>Download</button>
-      </div>
+        <video id="preview" autoplay muted></video>
     </div>
-  </div>
 
-  <!-- Editor Modal -->
-  <div id="editor-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-    <div class="glass w-full max-w-5xl mx-4 rounded-3xl p-8">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-semibold">Editor</h2>
-        <button id="close-editor" class="text-zinc-400 hover:text-white text-2xl">×</button>
-      </div>
+    <script>
+        let mediaRecorder, stream;
+        const statusDiv = document.getElementById('status');
+        const checkBtn = document.getElementById('checkBtn');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const preview = document.getElementById('preview');
 
-      <div class="flex flex-col gap-8">
-        <!-- Video -->
-        <div class="relative mx-auto" style="max-width: 800px;">
-          <video id="editor-video" class="w-full rounded-2xl bg-black" style="max-height: 450px;"></video>
-          
-          <!-- Crop Box -->
-          <div id="crop-box" class="crop-box hidden" style="top: 10%; left: 10%; width: 80%; height: 80%;">
-            <div class="crop-handle" style="top: -7px; left: -7px;" data-handle="tl"></div>
-            <div class="crop-handle" style="top: -7px; right: -7px;" data-handle="tr"></div>
-            <div class="crop-handle" style="bottom: -7px; left: -7px;" data-handle="bl"></div>
-            <div class="crop-handle" style="bottom: -7px; right: -7px;" data-handle="br"></div>
-            <div class="crop-handle" style="top: 50%; left: -7px; transform: translateY(-50%);" data-handle="l"></div>
-            <div class="crop-handle" style="top: 50%; right: -7px; transform: translateY(-50%);" data-handle="r"></div>
-            <div class="crop-handle" style="left: 50%; top: -7px; transform: translateX(-50%);" data-handle="t"></div>
-            <div class="crop-handle" style="left: 50%; bottom: -7px; transform: translateX(-50%);" data-handle="b"></div>
-          </div>
-        </div>
-
-        <!-- Timeline -->
-        <div>
-          <div class="flex justify-between text-sm text-zinc-400 mb-2 px-1">
-            <div>Trim</div>
-            <div id="trim-time">0.0s — 0.0s</div>
-          </div>
-          
-          <div id="timeline" class="timeline w-full relative">
-            <div id="timeline-trim" class="timeline-trim"></div>
-            <div id="playhead" class="timeline-playhead" style="left: 0%;"></div>
-            <div id="trim-start-handle" class="timeline-handle" style="left: 0%;"></div>
-            <div id="trim-end-handle" class="timeline-handle" style="left: 100%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-3 mt-8">
-        <button id="apply-edits" class="px-8 py-3 bg-red-600 hover:bg-red-500 rounded-2xl font-semibold">Apply &amp; Export</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Recording Logic
-    let mediaRecorder, stream, recordedChunks = [], videoBlobUrl = null;
-    const startBtn = document.getElementById('start');
-    const stopBtn = document.getElementById('stop');
-    const downloadBtn = document.getElementById('download');
-    const openEditorBtn = document.getElementById('open-editor');
-    const preview = document.getElementById('preview');
-    const player = document.getElementById('player');
-    const overlay = document.getElementById('overlay');
-    const statusText = document.getElementById('status-text');
-
-    startBtn.onclick = async () => {
-      try {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor" }, audio: true });
-        preview.srcObject = stream;
-        preview.classList.remove('hidden');
-        player.classList.add('hidden');
-        overlay.classList.remove('hidden');
-        statusText.textContent = "Recording...";
-
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          videoBlobUrl = URL.createObjectURL(blob);
-          preview.classList.add('hidden');
-          player.src = videoBlobUrl;
-          player.classList.remove('hidden');
-          overlay.classList.add('hidden');
-          statusText.textContent = "Preview ready";
-          downloadBtn.disabled = false;
-          openEditorBtn.classList.remove('hidden');
-          startBtn.disabled = true;
-          stopBtn.disabled = true;
+        // Resolution Tester
+        checkBtn.onclick = async () => {
+            statusDiv.innerText = "Testing resolution...";
+            try {
+                const testStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { width: { ideal: 4096 }, height: { ideal: 2160 } }
+                });
+                const settings = testStream.getVideoTracks()[0].getSettings();
+                testStream.getTracks().forEach(t => t.stop());
+                
+                statusDiv.innerHTML = `Detected: ${settings.width}x${settings.height}<br>` +
+                                     (settings.width >= 1920 ? "✅ 1080p Ready" : "⚠️ Low resolution detected");
+                startBtn.disabled = false;
+            } catch (e) {
+                statusDiv.innerText = "Error: Permission denied.";
+            }
         };
 
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-      } catch (err) { alert("Failed: " + err.message); }
-    };
+        // Start Recording
+        startBtn.onclick = async () => {
+            stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: { ideal: 1920 }, height: { ideal: 1080 } }
+            });
+            preview.srcObject = stream;
+            preview.style.display = 'block';
+            
+            let chunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'mineclip_recording.webm';
+                a.click();
+            };
+            
+            mediaRecorder.start();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            statusDiv.innerText = "Status: Recording... (Look for the red border)";
+        };
 
-    stopBtn.onclick = () => {
-      if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
-      stream?.getTracks().forEach(t => t.stop());
-      preview.srcObject = null;
-    };
-
-    // Download as MP4
-    downloadBtn.onclick = () => {
-      const a = document.createElement('a');
-      a.href = videoBlobUrl;
-      a.download = 'mineclip-recording.mp4';
-      a.click();
-    };
-
-    // Editor
-    const editorModal = document.getElementById('editor-modal');
-    const editorVideo = document.getElementById('editor-video');
-    const cropBox = document.getElementById('crop-box');
-    const timeline = document.getElementById('timeline');
-    const trimStartHandle = document.getElementById('trim-start-handle');
-    const trimEndHandle = document.getElementById('trim-end-handle');
-    const playhead = document.getElementById('playhead');
-    const timelineTrim = document.getElementById('timeline-trim');
-    const trimTime = document.getElementById('trim-time');
-
-    let trimStart = 0, trimEnd = 1;
-    let crop = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
-
-    openEditorBtn.onclick = () => {
-      editorModal.classList.remove('hidden');
-      editorVideo.src = videoBlobUrl;
-      editorVideo.load();
-      cropBox.classList.remove('hidden');
-
-      editorVideo.onloadedmetadata = () => {
-        trimEnd = editorVideo.duration;
-        updateTimeline();
-      };
-    };
-
-    document.getElementById('close-editor').onclick = () => {
-      editorModal.classList.add('hidden');
-      editorVideo.pause();
-    };
-
-    editorVideo.addEventListener('timeupdate', () => {
-      if (!editorVideo.duration) return;
-      const percent = (editorVideo.currentTime / editorVideo.duration) * 100;
-      playhead.style.left = `${percent}%`;
-    });
-
-    // Crop dragging
-    let isDragging = false, dragType = null, startX, startY, startCrop;
-
-    cropBox.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('crop-handle')) {
-        dragType = e.target.dataset.handle;
-      } else {
-        dragType = 'move';
-      }
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startCrop = { ...crop };
-      e.stopImmediatePropagation();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging || !editorVideo.videoWidth) return;
-      const rect = editorVideo.getBoundingClientRect();
-      const dx = (e.clientX - startX) / rect.width;
-      const dy = (e.clientY - startY) / rect.height;
-
-      if (dragType === 'move') {
-        crop.x = Math.max(0, Math.min(1 - crop.w, startCrop.x + dx));
-        crop.y = Math.max(0, Math.min(1 - crop.h, startCrop.y + dy));
-      } else if (dragType === 'tl') {
-        crop.x = Math.max(0, startCrop.x + dx);
-        crop.y = Math.max(0, startCrop.y + dy);
-        crop.w = Math.max(0.05, startCrop.w - dx);
-        crop.h = Math.max(0.05, startCrop.h - dy);
-      } else if (dragType === 'br') {
-        crop.w = Math.max(0.05, startCrop.w + dx);
-        crop.h = Math.max(0.05, startCrop.h + dy);
-      } else if (dragType === 'tr') {
-        crop.y = Math.max(0, startCrop.y + dy);
-        crop.w = Math.max(0.05, startCrop.w + dx);
-        crop.h = Math.max(0.05, startCrop.h - dy);
-      } else if (dragType === 'bl') {
-        crop.x = Math.max(0, startCrop.x + dx);
-        crop.w = Math.max(0.05, startCrop.w - dx);
-        crop.h = Math.max(0.05, startCrop.h + dy);
-      }
-      updateCropBox();
-    });
-
-    document.addEventListener('mouseup', () => { isDragging = false; dragType = null; });
-
-    function updateCropBox() {
-      cropBox.style.left = `${crop.x * 100}%`;
-      cropBox.style.top = `${crop.y * 100}%`;
-      cropBox.style.width = `${crop.w * 100}%`;
-      cropBox.style.height = `${crop.h * 100}%`;
-    }
-
-    function updateTimeline() {
-      const startPercent = (trimStart / editorVideo.duration) * 100;
-      const endPercent = (trimEnd / editorVideo.duration) * 100;
-
-      trimStartHandle.style.left = `${startPercent}%`;
-      trimEndHandle.style.left = `${endPercent}%`;
-      timelineTrim.style.left = `${startPercent}%`;
-      timelineTrim.style.width = `${endPercent - startPercent}%`;
-      trimTime.textContent = `${trimStart.toFixed(1)}s — ${trimEnd.toFixed(1)}s`;
-    }
-
-    function setupTimeline() {
-      let draggingHandle = null;
-
-      function updateTrim(clientX) {
-        const rect = timeline.getBoundingClientRect();
-        let percent = (clientX - rect.left) / rect.width;
-        percent = Math.max(0, Math.min(1, percent));
-        const time = percent * editorVideo.duration;
-
-        if (draggingHandle === trimStartHandle) {
-          trimStart = Math.min(time, trimEnd - 0.1);
-        } else if (draggingHandle === trimEndHandle) {
-          trimEnd = Math.max(time, trimStart + 0.1);
-        }
-        updateTimeline();
-      }
-
-      trimStartHandle.addEventListener('mousedown', () => draggingHandle = trimStartHandle);
-      trimEndHandle.addEventListener('mousedown', () => draggingHandle = trimEndHandle);
-
-      document.addEventListener('mousemove', (e) => {
-        if (draggingHandle) updateTrim(e.clientX);
-      });
-
-      document.addEventListener('mouseup', () => draggingHandle = null);
-
-      timeline.addEventListener('click', (e) => {
-        if (draggingHandle) return;
-        const rect = timeline.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
-        const time = percent * editorVideo.duration;
-        editorVideo.currentTime = Math.max(trimStart, Math.min(trimEnd, time));
-      });
-    }
-    setupTimeline();
-
-    // Apply Edits + Export as MP4
-    document.getElementById('apply-edits').onclick = async () => {
-      const video = editorVideo;
-      const duration = trimEnd - trimStart;
-      if (duration <= 0) return alert("Invalid trim range");
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const w = video.videoWidth * crop.w;
-      const h = video.videoHeight * crop.h;
-      canvas.width = w;
-      canvas.height = h;
-
-      const stream = canvas.captureStream();
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = () => {
-        const editedBlob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(editedBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'mineclip-edited.mp4';
-        a.click();
-        editorModal.classList.add('hidden');
-      };
-
-      recorder.start();
-      video.currentTime = trimStart;
-
-      const draw = () => {
-        if (video.currentTime >= trimEnd) {
-          recorder.stop();
-          return;
-        }
-        ctx.drawImage(video, video.videoWidth * crop.x, video.videoHeight * crop.y, w, h, 0, 0, w, h);
-        requestAnimationFrame(draw);
-      };
-
-      video.play();
-      draw();
-    };
-  </script>
+        stopBtn.onclick = () => {
+            mediaRecorder.stop();
+            stream.getTracks().forEach(t => t.stop());
+            preview.style.display = 'none';
+            stopBtn.disabled = true;
+            startBtn.disabled = false;
+            statusDiv.innerText = "Status: Saved!";
+        };
+    </script>
 </body>
 </html>
